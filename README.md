@@ -16,9 +16,24 @@ Suggestions are welcome. Report bugs [here](https://github.com/pearlxcore/PS5Pkg
 
 # Requirement
 
-- Windows 10 or 11 (64-bit).
+- Windows 10 or 11 (64-bit) for the original WinForms app.
+- Linux, macOS or Windows for the cross-platform CLI and Avalonia GUI.
 
-The release build is self-contained and includes the .NET runtime, so nothing else needs to be installed.
+The release builds are self-contained and include the .NET runtime, so nothing else needs to be installed.
+
+# Cross-platform builds
+
+Alongside the Windows app, this fork builds two front ends that run on Linux, macOS and Windows,
+because they depend only on the portable engine projects:
+
+- **[CLI](PS5PKGTool.Cli/)** - `scan`, `info`, `files` and `extract`, with `--json` output.
+- **[GUI](PS5PKGTool.Gui/)** - an [Avalonia](https://avaloniaui.net/) desktop UI (MIT licensed).
+
+CI builds both for `linux-x64`, `linux-arm64`, `osx-x64`, `osx-arm64` and `win-x64` on every push,
+and attaches them to a GitHub release when a `v*` tag is pushed.
+
+macOS builds are unsigned, so Gatekeeper blocks them until you either sign them or run
+`xattr -dr com.apple.quarantine` on the extracted binary.
 
 # Features
 

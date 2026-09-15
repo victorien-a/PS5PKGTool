@@ -61,9 +61,13 @@ jobs:
         shell: bash
         run: |
           mkdir -p dist
-          # Ship the CLI and GUI for this platform as one archive.
+          # Debug symbols are not worth shipping, and the CLI and GUI emit
+          # identically named ones, which collides when both are archived.
+          rm -f artifacts/cli/*.pdb artifacts/gui/*.pdb
+          # Keep cli/ and gui/ as separate directories inside the archive so
+          # their shared dependencies cannot overwrite each other.
           if [ "${{ runner.os }}" = "Windows" ]; then
-            7z a "dist/ps5pkgtool-${{ matrix.name }}.zip" ./artifacts/cli/* ./artifacts/gui/*
+            7z a "dist/ps5pkgtool-${{ matrix.name }}.zip" ./artifacts/*
           else
             chmod +x artifacts/cli/ps5pkgtool artifacts/gui/ps5pkgtool-gui || true
             tar -czf "dist/ps5pkgtool-${{ matrix.name }}.tar.gz" -C artifacts .

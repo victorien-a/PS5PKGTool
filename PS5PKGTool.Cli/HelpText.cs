@@ -15,6 +15,11 @@ internal static class HelpText
               info <path>           Show detailed metadata for a single item
               files <path>          List the files inside a dump, package or image
               extract <pkg> <dir>   Extract a Sony .pkg into a directory
+              convert <pkg> <out>   Convert a Sony .pkg into another image format
+              split <pkg> <dir>     Split a package into verifiable pieces
+              merge <manifest> <out> Rebuild a package from split pieces
+              validate <pkg>        Run acceptance checks against a package
+              build <dir> <out.pkg> Build a debug package from a dump
               version               Show version and runtime information
 
             Common options:

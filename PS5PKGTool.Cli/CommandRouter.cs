@@ -31,6 +31,11 @@ internal static class CommandRouter
                 "info" => await InfoCommand.RunAsync(rest, cancellation.Token),
                 "files" => await FilesCommand.RunAsync(rest, cancellation.Token),
                 "extract" => await ExtractCommand.RunAsync(rest, cancellation.Token),
+                "convert" => await ConvertCommand.RunAsync(rest, cancellation.Token),
+                "split" => await SplitCommand.RunAsync(rest, cancellation.Token),
+                "merge" => await MergeCommand.RunAsync(rest, cancellation.Token),
+                "validate" => await ValidateCommand.RunAsync(rest, cancellation.Token),
+                "build" => await BuildCommand.RunAsync(rest, cancellation.Token),
                 "version" => VersionCommand.Run(),
                 _ => UnknownVerb(verb),
             };

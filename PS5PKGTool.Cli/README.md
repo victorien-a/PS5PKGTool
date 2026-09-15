@@ -32,6 +32,11 @@ ps5pkgtool <command> [options]
 | `info <path>` | Show detailed metadata for a single item |
 | `files <path>` | List the files inside a dump, package or image |
 | `extract <path> <dir>` | Extract a package, image or dump into a directory |
+| `convert <pkg> <out>` | Convert a Sony `.pkg` into an exfat, ffpkg or ffpfsc image |
+| `split <pkg> <dir>` | Split a package into verifiable pieces plus a manifest |
+| `merge <manifest> <out>` | Rebuild a package from split pieces |
+| `validate <pkg>` | Run structural acceptance checks against a package |
+| `build <dir> <out.pkg>` | Build a debug package from a loose dump |
 | `version` | Show version and runtime information |
 
 Supported inputs: loose dumps (`sce_sys/param.json`), Sony `.pkg`, `.ffpfsc`,
@@ -41,7 +46,12 @@ Supported inputs: loose dumps (`sce_sys/param.json`), Sony `.pkg`, `.ffpfsc`,
 
 - `--recursive`, `-r` — recurse into subdirectories (`scan`)
 - `--limit N` — show only the first N files (`files`)
-- `--json` — emit JSON instead of a table (`scan`, `info`, `files`)
+- `--json` — emit JSON instead of a table (`scan`, `info`, `files`, `validate`)
+- `--to <exfat|ffpkg|ffpfsc>` — conversion target (`convert`)
+- `--overwrite` — replace an existing output (`convert`)
+- `--piece-size SIZE` — piece size such as `4GB` or `700MB` (`split`)
+- `--content-id ID` — override the content ID; read from `sce_sys/param.json` when omitted (`build`)
+- `--passcode VALUE` — package passcode (`build`, `extract`)
 
 ### Examples
 
@@ -50,6 +60,17 @@ ps5pkgtool scan ~/PS5 --recursive
 ps5pkgtool info ~/PS5/game.pkg
 ps5pkgtool files ~/PS5/game.pkg --limit 20
 ps5pkgtool extract ~/PS5/game.pkg ~/out
+ps5pkgtool convert ~/PS5/game.pkg ~/out/game.exfat --to exfat
+ps5pkgtool split ~/PS5/game.pkg ~/pieces --piece-size 4GB
+ps5pkgtool merge ~/pieces/game.ps5split.json ~/PS5/game.pkg
+ps5pkgtool validate ~/PS5/game.pkg
+ps5pkgtool build ~/PS5/GameAlpha ~/out/game.pkg
+```
+
+`validate` exits non-zero if any check fails, so it can gate a script:
+
+```bash
+ps5pkgtool validate game.pkg || echo "not structurally ready"
 ```
 
 `--json` writes machine readable output on stdout while progress goes to stderr,

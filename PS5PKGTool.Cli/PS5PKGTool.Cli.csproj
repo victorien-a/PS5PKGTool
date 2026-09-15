@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <AssemblyName>ps5pkgtool</AssemblyName>
+    <RootNamespace>PS5PKGTool.Cli</RootNamespace>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <Product>PS5 PKG Tool CLI</Product>
+    <Description>Cross-platform command line front end for the PS5 PKG Tool engine.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\PS5PKGTool.Core\PS5PKGTool.Core.csproj" />
+  </ItemGroup>
+</Project>

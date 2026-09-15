@@ -1,0 +1,108 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:PS5PKGTool.Gui.ViewModels"
+        x:Class="PS5PKGTool.Gui.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="PS5 PKG Tool"
+        Width="1100" Height="700"
+        MinWidth="720" MinHeight="460">
+
+  <DockPanel>
+
+    <!-- Toolbar -->
+    <Border DockPanel.Dock="Top" Padding="10,8" Background="#1F1F1F">
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <Button Content="Add folder..." Click="OnAddFolder" />
+        <Button Content="Remove" Click="OnRemoveFolder"
+                IsEnabled="{Binding #FolderList.SelectedItem, Converter={x:Static ObjectConverters.IsNotNull}}" />
+        <Button Content="Scan" Click="OnScan" IsEnabled="{Binding CanScan}" />
+        <Button Content="Cancel" Click="OnCancelScan" IsEnabled="{Binding IsScanning}" />
+        <TextBox Width="260" PlaceholderText="Filter by title, title ID or content ID"
+                 Text="{Binding SearchText}" />
+      </StackPanel>
+    </Border>
+
+    <!-- Status bar -->
+    <Border DockPanel.Dock="Bottom" Padding="10,6" Background="#1F1F1F">
+      <StackPanel Orientation="Horizontal" Spacing="10">
+        <ProgressBar IsIndeterminate="True" Width="120" Height="4"
+                     IsVisible="{Binding IsScanning}" />
+        <TextBlock Text="{Binding Status}" VerticalAlignment="Center" />
+      </StackPanel>
+    </Border>
+
+    <Grid ColumnDefinitions="220,4,*,4,320">
+
+      <!-- Folders -->
+      <DockPanel Grid.Column="0" Margin="8">
+        <TextBlock DockPanel.Dock="Top" Text="Library folders" FontWeight="SemiBold" Margin="0,0,0,6" />
+        <ListBox x:Name="FolderList" ItemsSource="{Binding Folders}" />
+      </DockPanel>
+
+      <GridSplitter Grid.Column="1" ResizeDirection="Columns" Background="#2A2A2A" />
+
+      <!-- Library -->
+      <DataGrid Grid.Column="2" Margin="8"
+                ItemsSource="{Binding Games}"
+                SelectedItem="{Binding SelectedGame}"
+                IsReadOnly="True"
+                GridLinesVisibility="Horizontal"
+                CanUserSortColumns="True">
+        <DataGrid.Columns>
+          <DataGridTextColumn Header="Title" Binding="{Binding Title}" Width="*" />
+          <DataGridTextColumn Header="Title ID" Binding="{Binding TitleId}" Width="110" />
+          <DataGridTextColumn Header="Format" Binding="{Binding Format}" Width="80" />
+          <DataGridTextColumn Header="Version" Binding="{Binding ContentVersion}" Width="80" />
+          <DataGridTextColumn Header="FW" Binding="{Binding RequiredFirmware}" Width="70" />
+          <DataGridTextColumn Header="Size" Binding="{Binding SizeText}" Width="100" />
+        </DataGrid.Columns>
+      </DataGrid>
+
+      <GridSplitter Grid.Column="3" ResizeDirection="Columns" Background="#2A2A2A" />
+
+      <!-- Details -->
+      <ScrollViewer Grid.Column="4" Margin="8">
+        <StackPanel Spacing="10">
+
+          <TextBlock Text="Details" FontWeight="SemiBold" />
+
+          <TextBlock Text="Select an item to see its details."
+                     Opacity="0.6" TextWrapping="Wrap"
+                     IsVisible="{Binding !HasSelection}" />
+
+          <StackPanel Spacing="4"
+                      IsVisible="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).HasSelection}"
+                      DataContext="{Binding SelectedGame}">
+            <TextBlock Text="{Binding Title}" FontSize="16" FontWeight="SemiBold" TextWrapping="Wrap" />
+            <TextBlock Text="{Binding TitleId}" Opacity="0.7" />
+            <TextBlock Text="{Binding ContentId}" Opacity="0.7" TextWrapping="Wrap" />
+            <Separator Margin="0,6" />
+            <TextBlock Text="{Binding Format, StringFormat='Format: {0}'}" />
+            <TextBlock Text="{Binding ContentVersion, StringFormat='Version: {0}'}" />
+            <TextBlock Text="{Binding RequiredFirmware, StringFormat='Firmware: {0}'}" />
+            <TextBlock Text="{Binding SizeText, StringFormat='Size: {0}'}" />
+            <TextBlock Text="{Binding Path}" Opacity="0.6" TextWrapping="Wrap" FontSize="11" />
+          </StackPanel>
+
+          <Separator IsVisible="{Binding HasSelection}" />
+
+          <TextBlock Text="Files" FontWeight="SemiBold" IsVisible="{Binding HasSelection}" />
+          <ItemsControl ItemsSource="{Binding SelectedGameFiles}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:FileEntryViewModel">
+                <Grid ColumnDefinitions="*,Auto" Margin="0,1">
+                  <TextBlock Grid.Column="0" Text="{Binding Path}" FontSize="11"
+                             TextTrimming="CharacterEllipsis" />
+                  <TextBlock Grid.Column="1" Text="{Binding SizeText}" FontSize="11"
+                             Opacity="0.6" Margin="8,0,0,0" />
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+
+        </StackPanel>
+      </ScrollViewer>
+
+    </Grid>
+  </DockPanel>
+</Window>

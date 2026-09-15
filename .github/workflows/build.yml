@@ -1,0 +1,94 @@
+name: Build
+
+on:
+  push:
+    branches: [ main, linux-port ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-x64
+            os: ubuntu-latest
+            rid: linux-x64
+          - name: linux-arm64
+            os: ubuntu-latest
+            rid: linux-arm64
+          - name: osx-x64
+            os: macos-latest
+            rid: osx-x64
+          - name: osx-arm64
+            os: macos-latest
+            rid: osx-arm64
+          - name: win-x64
+            os: windows-latest
+            rid: win-x64
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build portable projects
+        run: |
+          dotnet build PS5PKGTool.Ufs2/PS5PKGTool.Ufs2.csproj -c Release
+          dotnet build PS5PKGTool.Ffpfsc/PS5PKGTool.Ffpfsc.csproj -c Release
+          dotnet build PS5PKGTool.Core/PS5PKGTool.Core.csproj -c Release
+
+      - name: Publish CLI
+        run: >
+          dotnet publish PS5PKGTool.Cli/PS5PKGTool.Cli.csproj
+          -c Release -r ${{ matrix.rid }} --self-contained
+          -p:PublishSingleFile=true
+          -o artifacts/cli
+
+      - name: Publish GUI
+        run: >
+          dotnet publish PS5PKGTool.Gui/PS5PKGTool.Gui.csproj
+          -c Release -r ${{ matrix.rid }} --self-contained
+          -p:PublishSingleFile=true
+          -o artifacts/gui
+
+      - name: Package
+        shell: bash
+        run: |
+          mkdir -p dist
+          # Ship the CLI and GUI for this platform as one archive.
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            7z a "dist/ps5pkgtool-${{ matrix.name }}.zip" ./artifacts/cli/* ./artifacts/gui/*
+          else
+            chmod +x artifacts/cli/ps5pkgtool artifacts/gui/ps5pkgtool-gui || true
+            tar -czf "dist/ps5pkgtool-${{ matrix.name }}.tar.gz" -C artifacts .
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ps5pkgtool-${{ matrix.name }}
+          path: dist/*
+          retention-days: 14
+
+  release:
+    name: Release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true

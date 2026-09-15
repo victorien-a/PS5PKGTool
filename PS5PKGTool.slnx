@@ -3,5 +3,6 @@
   <Project Path="PS5PKGTool.Ffpfsc/PS5PKGTool.Ffpfsc.csproj" />
   <Project Path="PS5PKGTool.Ufs2/PS5PKGTool.Ufs2.csproj" />
   <Project Path="PS5PKGTool.Cli/PS5PKGTool.Cli.csproj" />
+  <Project Path="PS5PKGTool.Gui/PS5PKGTool.Gui.csproj" />
   <Project Path="PS5PKGTool/PS5PKGTool.csproj" />
 </Solution>

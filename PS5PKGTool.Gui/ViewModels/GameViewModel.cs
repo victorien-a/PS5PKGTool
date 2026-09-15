@@ -1,10 +1,14 @@
+using Avalonia.Media.Imaging;
 using PS5PKGTool.Core.Models;
 
 namespace PS5PKGTool.Gui.ViewModels;
 
 /// <summary>A single scanned item, shaped for display.</summary>
-public sealed class GameViewModel(Ps5GameInfo game)
+public sealed class GameViewModel(Ps5GameInfo game) : ViewModelBase
 {
+    private Bitmap? _icon;
+    private bool _iconRequested;
+
     public Ps5GameInfo Model { get; } = game;
 
     public string Title => string.IsNullOrWhiteSpace(Model.Title) ? "(untitled)" : Model.Title;
@@ -24,6 +28,23 @@ public sealed class GameViewModel(Ps5GameInfo game)
     public string Category => Model.ApplicationCategory;
     public string Path => Model.RootPath;
     public string SizeText => FormatSize(Model.SourceSize);
+
+    /// <summary>
+    /// Decoded icon bitmap, or null until loaded (or if none/corrupt). Set by
+    /// <see cref="Services.GameArtworkService"/>; the view falls back to a placeholder while null.
+    /// </summary>
+    public Bitmap? Icon
+    {
+        get => _icon;
+        internal set => SetProperty(ref _icon, value);
+    }
+
+    /// <summary>Guards against re-requesting the same icon load from multiple UI touch points.</summary>
+    internal bool IconRequested
+    {
+        get => _iconRequested;
+        set => _iconRequested = value;
+    }
 
     public static string FormatSize(long bytes)
     {

@@ -1,7 +1,9 @@
 using System.Collections.ObjectModel;
 using System.Windows.Input;
+using Avalonia.Media.Imaging;
 using PS5PKGTool.Core.Models;
 using PS5PKGTool.Core.Services;
+using PS5PKGTool.Gui.Services;
 
 namespace PS5PKGTool.Gui.ViewModels;
 
@@ -9,12 +11,15 @@ public sealed class MainWindowViewModel : ViewModelBase
 {
     private readonly Ps5LibraryScanner _scanner = new();
     private readonly Ps5LibraryCache _libraryCache;
+    private readonly GameArtworkService _artwork = new();
     private CancellationTokenSource? _scanCancellation;
 
     private string _status = "Add a folder to scan for PS5 content.";
     private bool _isScanning;
     private GameViewModel? _selectedGame;
     private string _searchText = string.Empty;
+    private string? _formatFilter = "Any format";
+    private string? _categoryFilter = "Any category";
 
     public ObservableCollection<string> Folders { get; } = [];
     public ObservableCollection<GameViewModel> Games { get; } = [];
@@ -22,6 +27,14 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     /// <summary>Task queue for long-running package operations, bound by the view's task panel.</summary>
     public TaskQueueViewModel TaskQueue { get; }
+
+    /// <summary>Options for the quick "Format" filter dropdown; the first entry means "any".</summary>
+    public ObservableCollection<string> FormatOptions { get; } =
+        ["Any format", "dump", "pkg", "ffpfsc", "exfat", "ffpkg"];
+
+    /// <summary>Options for the quick "Category" filter dropdown; the first entry means "any".</summary>
+    public ObservableCollection<string> CategoryOptions { get; } =
+        ["Any category", "Game", "DLC", "Patch", "App"];
 
     public MainWindowViewModel() : this(null, null)
     {
@@ -65,6 +78,29 @@ public sealed class MainWindowViewModel : ViewModelBase
         set
         {
             if (SetProperty(ref _searchText, value)) ApplyFilter();
+        }
+    }
+
+    /// <summary>
+    /// Quick "Format" dropdown selection ("Any format" or null clears it). Composes into
+    /// <see cref="SearchText"/> as a <c>format:</c> token rather than duplicating the filter logic.
+    /// </summary>
+    public string? FormatFilter
+    {
+        get => _formatFilter;
+        set
+        {
+            if (SetProperty(ref _formatFilter, value)) ApplyQuickFilters();
+        }
+    }
+
+    /// <summary>Quick "Category" dropdown selection; composes into <see cref="SearchText"/> as <c>category:</c>.</summary>
+    public string? CategoryFilter
+    {
+        get => _categoryFilter;
+        set
+        {
+            if (SetProperty(ref _categoryFilter, value)) ApplyQuickFilters();
         }
     }
 
@@ -215,18 +251,60 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     public void CancelScan() => _scanCancellation?.Cancel();
 
+    /// <summary>
+    /// Rebuilds <see cref="SearchText"/> from the quick-filter dropdowns plus whatever free-text
+    /// tokens the user already typed (any existing <c>format:</c>/<c>category:</c> token is replaced
+    /// rather than duplicated, so toggling a dropdown twice doesn't accumulate stale tokens).
+    /// </summary>
+    private void ApplyQuickFilters()
+    {
+        IEnumerable<string> tokens = (_searchText ?? string.Empty)
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Where(t => !t.StartsWith("format:", StringComparison.OrdinalIgnoreCase) &&
+                        !t.StartsWith("category:", StringComparison.OrdinalIgnoreCase));
+
+        var parts = new List<string>(tokens);
+        if (!string.IsNullOrEmpty(_formatFilter) && _formatFilter != FormatOptions[0])
+            parts.Insert(0, $"format:{_formatFilter}");
+        if (!string.IsNullOrEmpty(_categoryFilter) && _categoryFilter != CategoryOptions[0])
+            parts.Insert(0, $"category:{_categoryFilter}");
+
+        SearchText = string.Join(' ', parts);
+    }
+
     private void ApplyFilter()
     {
         string query = _searchText.Trim();
         IEnumerable<GameViewModel> filtered = string.IsNullOrEmpty(query)
             ? _allGames
-            : _allGames.Where(g =>
-                g.Title.Contains(query, StringComparison.OrdinalIgnoreCase) ||
-                g.TitleId.Contains(query, StringComparison.OrdinalIgnoreCase) ||
-                g.ContentId.Contains(query, StringComparison.OrdinalIgnoreCase));
+            : _allGames.Where(g => Ps5LibraryQuery.Matches(g.Model, query));
 
         Games.Clear();
-        foreach (GameViewModel game in filtered) Games.Add(game);
+        foreach (GameViewModel game in filtered)
+        {
+            Games.Add(game);
+            RequestIcon(game);
+        }
+    }
+
+    /// <summary>
+    /// Kicks off (or reuses) the icon decode for a row. Cheap to call per row on every filter
+    /// refresh: the artwork service dedupes in-flight/cached loads, and the per-VM flag here avoids
+    /// even that lookup once a row already has an answer (icon or confirmed none).
+    /// </summary>
+    private void RequestIcon(GameViewModel game)
+    {
+        if (game.IconRequested) return;
+        Bitmap? cached = _artwork.TryGetCached(game.Model);
+        if (cached is not null)
+        {
+            game.Icon = cached;
+            game.IconRequested = true;
+            return;
+        }
+
+        game.IconRequested = true;
+        _artwork.RequestAsync(game.Model, bitmap => game.Icon = bitmap);
     }
 
     private async Task LoadFilesAsync(GameViewModel? game)

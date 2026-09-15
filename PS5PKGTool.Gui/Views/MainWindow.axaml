@@ -21,8 +21,26 @@
         <Button Content="Convert..." Click="OnConvert" IsEnabled="{Binding HasSelection}" />
         <Button Content="Extract..." Click="OnExtract" IsEnabled="{Binding HasSelection}" />
         <Button Content="Build..." Click="OnBuild" />
-        <TextBox Width="260" PlaceholderText="Filter by title, title ID or content ID"
-                 Text="{Binding SearchText}" />
+        <Separator />
+        <ComboBox ItemsSource="{Binding FormatOptions}" SelectedItem="{Binding FormatFilter}"
+                  ToolTip.Tip="Quick filter by format (adds a format: token to the search box)" />
+        <ComboBox ItemsSource="{Binding CategoryOptions}" SelectedItem="{Binding CategoryFilter}"
+                  ToolTip.Tip="Quick filter by category (adds a category: token to the search box)" />
+        <TextBox Width="320" PlaceholderText="Search (title:, id:, size:&gt;50GB, -exclude...)"
+                 Text="{Binding SearchText}">
+          <ToolTip.Tip>
+            <StackPanel Spacing="2">
+              <TextBlock Text="Search grammar:" FontWeight="SemiBold" />
+              <TextBlock Text="Free text matches title/title ID/content ID/path." />
+              <TextBlock Text="Fields: title: id: content: category: region: size: version: fw: feature: drm: path:" />
+              <TextBlock Text="AND with spaces: title:zero fw:&gt;=6.00" />
+              <TextBlock Text="OR within a token (no spaces around |): alpha|beta" />
+              <TextBlock Text="Negate with -: -category:dlc" />
+              <TextBlock Text="Comparisons: size:&gt;50GB  fw:&gt;=6.00" />
+              <TextBlock Text="Quoted phrases: &quot;game of the year&quot;" />
+            </StackPanel>
+          </ToolTip.Tip>
+        </TextBox>
       </StackPanel>
     </Border>
 
@@ -93,6 +111,17 @@
                 GridLinesVisibility="Horizontal"
                 CanUserSortColumns="True">
         <DataGrid.Columns>
+          <DataGridTemplateColumn Header="" Width="Auto" MinWidth="36" CanUserSort="False">
+            <DataGridTemplateColumn.CellTemplate>
+              <DataTemplate x:DataType="vm:GameViewModel">
+                <Grid Width="28" Height="28" Margin="2">
+                  <Border Background="#2A2A2A" CornerRadius="3" />
+                  <Image Source="{Binding Icon}" Width="28" Height="28" Stretch="UniformToFill"
+                         IsVisible="{Binding Icon, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                </Grid>
+              </DataTemplate>
+            </DataGridTemplateColumn.CellTemplate>
+          </DataGridTemplateColumn>
           <!-- Title takes the remaining space but keeps a floor, so widening the fixed
                columns to fit their headers cannot squeeze it away entirely. -->
           <DataGridTextColumn Header="Title" Binding="{Binding Title}" Width="*" MinWidth="160" />
@@ -119,6 +148,11 @@
           <StackPanel Spacing="4"
                       IsVisible="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).HasSelection}"
                       DataContext="{Binding SelectedGame}">
+            <Grid Width="96" Height="96" HorizontalAlignment="Left">
+              <Border Background="#2A2A2A" CornerRadius="4" />
+              <Image Source="{Binding Icon}" Width="96" Height="96" Stretch="Uniform"
+                     IsVisible="{Binding Icon, Converter={x:Static ObjectConverters.IsNotNull}}" />
+            </Grid>
             <TextBlock Text="{Binding Title}" FontSize="16" FontWeight="SemiBold" TextWrapping="Wrap" />
             <TextBlock Text="{Binding TitleId}" Opacity="0.7" />
             <TextBlock Text="{Binding ContentId}" Opacity="0.7" TextWrapping="Wrap" />

@@ -14,9 +14,15 @@ public partial class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
+            var viewModel = new MainWindowViewModel();
+
+            // Show the previously scanned library straight away; a fresh scan is only
+            // needed when the user asks for one.
+            viewModel.LoadCachedLibrary();
+
             desktop.MainWindow = new MainWindow
             {
-                DataContext = new MainWindowViewModel(),
+                DataContext = viewModel,
             };
         }
 

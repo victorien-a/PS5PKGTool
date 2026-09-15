@@ -41,4 +41,42 @@ public partial class MainWindow : Window
     }
 
     private void OnCancelScan(object? sender, RoutedEventArgs e) => ViewModel?.CancelScan();
+
+    private void OnCancelTask(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Control { Tag: string id }) ViewModel?.TaskQueue.Cancel(id);
+    }
+
+    private void OnRetryTask(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Control { Tag: string id }) ViewModel?.TaskQueue.Retry(id);
+    }
+
+    private void OnClearCompletedTasks(object? sender, RoutedEventArgs e) =>
+        ViewModel?.TaskQueue.ClearCompleted();
+
+    private async void OnConvert(object? sender, RoutedEventArgs e)
+    {
+        GameViewModel? game = ViewModel?.SelectedGame;
+        if (game is null) return;
+        var dialogVm = new OperationDialogViewModel(OperationKind.Convert, game.Model);
+        var dialog = new OperationDialog { DataContext = dialogVm };
+        await dialog.ShowDialog(this);
+    }
+
+    private async void OnExtract(object? sender, RoutedEventArgs e)
+    {
+        GameViewModel? game = ViewModel?.SelectedGame;
+        if (game is null) return;
+        var dialogVm = new OperationDialogViewModel(OperationKind.Extract, game.Model);
+        var dialog = new OperationDialog { DataContext = dialogVm };
+        await dialog.ShowDialog(this);
+    }
+
+    private async void OnBuild(object? sender, RoutedEventArgs e)
+    {
+        var dialogVm = new OperationDialogViewModel(OperationKind.Build, ViewModel?.SelectedGame?.Model);
+        var dialog = new OperationDialog { DataContext = dialogVm };
+        await dialog.ShowDialog(this);
+    }
 }

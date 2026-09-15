@@ -8,6 +8,7 @@ namespace PS5PKGTool.Gui.ViewModels;
 public sealed class MainWindowViewModel : ViewModelBase
 {
     private readonly Ps5LibraryScanner _scanner = new();
+    private readonly Ps5LibraryCache _libraryCache;
     private CancellationTokenSource? _scanCancellation;
 
     private string _status = "Add a folder to scan for PS5 content.";
@@ -18,6 +19,27 @@ public sealed class MainWindowViewModel : ViewModelBase
     public ObservableCollection<string> Folders { get; } = [];
     public ObservableCollection<GameViewModel> Games { get; } = [];
     public ObservableCollection<FileEntryViewModel> SelectedGameFiles { get; } = [];
+
+    /// <summary>Task queue for long-running package operations, bound by the view's task panel.</summary>
+    public TaskQueueViewModel TaskQueue { get; }
+
+    public MainWindowViewModel() : this(null, null)
+    {
+    }
+
+    /// <param name="libraryCacheDirectory">
+    /// Overrides the library cache location; pass a temp directory in tests so probes never touch
+    /// the real user cache under ~/.local/share/PS5PKGTool.
+    /// </param>
+    /// <param name="taskQueuePersistencePath">
+    /// Overrides the task queue's persistence file path; pass a temp path in tests for the same
+    /// reason as <paramref name="libraryCacheDirectory"/>.
+    /// </param>
+    public MainWindowViewModel(string? libraryCacheDirectory, string? taskQueuePersistencePath = null)
+    {
+        _libraryCache = new Ps5LibraryCache(libraryCacheDirectory);
+        TaskQueue = new TaskQueueViewModel(persistencePath: taskQueuePersistencePath);
+    }
 
     public string Status
     {
@@ -61,6 +83,55 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     /// <summary>All scanned items; <see cref="Games"/> is the filtered view bound to the list.</summary>
     private readonly List<GameViewModel> _allGames = [];
+
+    /// <summary>
+    /// Loads the previously cached library instantly (no scan), so the list is populated the
+    /// moment the window opens. A missing or corrupt cache degrades to an empty list; it never
+    /// throws.
+    /// </summary>
+    public void LoadCachedLibrary()
+    {
+        Ps5LibraryManifest manifest;
+        try
+        {
+            manifest = _libraryCache.Load();
+        }
+        catch (Exception)
+        {
+            manifest = new Ps5LibraryManifest();
+        }
+
+        _allGames.Clear();
+        Games.Clear();
+        SelectedGameFiles.Clear();
+
+        foreach (Ps5GameInfo game in manifest.Games.OrderBy(g => g.Title, StringComparer.OrdinalIgnoreCase))
+            _allGames.Add(new GameViewModel(game));
+
+        ApplyFilter();
+
+        Status = manifest.Games.Count == 0
+            ? "No cached library. Add a folder to scan for PS5 content."
+            : $"{manifest.Games.Count} item(s) loaded from cache (saved {manifest.CreatedUtc:g} UTC).";
+    }
+
+    /// <summary>Clears the on-disk library cache and the currently displayed list.</summary>
+    public void ClearCachedLibrary()
+    {
+        try
+        {
+            _libraryCache.Clear();
+        }
+        catch (Exception)
+        {
+            // Best-effort; nothing useful to surface if the delete itself fails.
+        }
+
+        _allGames.Clear();
+        Games.Clear();
+        SelectedGameFiles.Clear();
+        Status = "Library cache cleared.";
+    }
 
     public void AddFolder(string folder)
     {
@@ -113,6 +184,15 @@ public sealed class MainWindowViewModel : ViewModelBase
                 _allGames.Add(new GameViewModel(game));
 
             ApplyFilter();
+
+            try
+            {
+                _libraryCache.Save(result.Games);
+            }
+            catch (Exception)
+            {
+                // Caching is best-effort; a failed save should not fail the scan the user just ran.
+            }
 
             Status = result.Games.Count == 0
                 ? "No PS5 content found."

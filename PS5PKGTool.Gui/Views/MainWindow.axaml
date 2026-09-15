@@ -17,9 +17,47 @@
                 IsEnabled="{Binding #FolderList.SelectedItem, Converter={x:Static ObjectConverters.IsNotNull}}" />
         <Button Content="Scan" Click="OnScan" IsEnabled="{Binding CanScan}" />
         <Button Content="Cancel" Click="OnCancelScan" IsEnabled="{Binding IsScanning}" />
+        <Separator />
+        <Button Content="Convert..." Click="OnConvert" IsEnabled="{Binding HasSelection}" />
+        <Button Content="Extract..." Click="OnExtract" IsEnabled="{Binding HasSelection}" />
+        <Button Content="Build..." Click="OnBuild" />
         <TextBox Width="260" PlaceholderText="Filter by title, title ID or content ID"
                  Text="{Binding SearchText}" />
       </StackPanel>
+    </Border>
+
+    <!-- Task queue: only takes space once there is something to show -->
+    <Border DockPanel.Dock="Bottom" Padding="10,8" Background="#1A1A1A"
+            BorderBrush="#2A2A2A" BorderThickness="0,1,0,0"
+            DataContext="{Binding TaskQueue}"
+            IsVisible="{Binding HasTasks}">
+      <DockPanel MaxHeight="180">
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,6">
+          <TextBlock Grid.Column="0" Text="{Binding Status}" FontWeight="SemiBold"
+                     VerticalAlignment="Center" />
+          <Button Grid.Column="1" Content="Clear completed" Click="OnClearCompletedTasks" />
+        </Grid>
+        <ScrollViewer>
+          <ItemsControl ItemsSource="{Binding Tasks}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:TaskItemViewModel">
+                <Grid ColumnDefinitions="*,Auto,Auto,Auto" RowDefinitions="Auto,Auto" Margin="0,3">
+                  <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding DisplayName}"
+                             TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                  <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding StatusText}"
+                             Opacity="0.7" Margin="8,0" VerticalAlignment="Center" />
+                  <Button Grid.Row="0" Grid.Column="2" Content="Cancel" Padding="8,2"
+                          IsVisible="{Binding CanCancel}" Click="OnCancelTask" Tag="{Binding Id}" />
+                  <Button Grid.Row="0" Grid.Column="3" Content="Retry" Padding="8,2"
+                          IsVisible="{Binding CanRetry}" Click="OnRetryTask" Tag="{Binding Id}" />
+                  <ProgressBar Grid.Row="1" Grid.ColumnSpan="4" Minimum="0" Maximum="100"
+                               Value="{Binding Percent}" Height="4" Margin="0,4,0,0" />
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </DockPanel>
     </Border>
 
     <!-- Status bar -->
@@ -36,7 +74,13 @@
       <!-- Folders -->
       <DockPanel Grid.Column="0" Margin="8">
         <TextBlock DockPanel.Dock="Top" Text="Library folders" FontWeight="SemiBold" Margin="0,0,0,6" />
-        <ListBox x:Name="FolderList" ItemsSource="{Binding Folders}" />
+        <ListBox x:Name="FolderList" ItemsSource="{Binding Folders}">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="x:String">
+              <TextBlock Text="{Binding}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding}" />
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
       </DockPanel>
 
       <GridSplitter Grid.Column="1" ResizeDirection="Columns" Background="#2A2A2A" />
@@ -49,12 +93,14 @@
                 GridLinesVisibility="Horizontal"
                 CanUserSortColumns="True">
         <DataGrid.Columns>
-          <DataGridTextColumn Header="Title" Binding="{Binding Title}" Width="*" />
-          <DataGridTextColumn Header="Title ID" Binding="{Binding TitleId}" Width="110" />
-          <DataGridTextColumn Header="Format" Binding="{Binding Format}" Width="80" />
-          <DataGridTextColumn Header="Version" Binding="{Binding ContentVersion}" Width="80" />
-          <DataGridTextColumn Header="FW" Binding="{Binding RequiredFirmware}" Width="70" />
-          <DataGridTextColumn Header="Size" Binding="{Binding SizeText}" Width="100" />
+          <!-- Title takes the remaining space but keeps a floor, so widening the fixed
+               columns to fit their headers cannot squeeze it away entirely. -->
+          <DataGridTextColumn Header="Title" Binding="{Binding Title}" Width="*" MinWidth="160" />
+          <DataGridTextColumn Header="Title ID" Binding="{Binding TitleId}" Width="Auto" MinWidth="90" />
+          <DataGridTextColumn Header="Format" Binding="{Binding Format}" Width="Auto" MinWidth="70" />
+          <DataGridTextColumn Header="Version" Binding="{Binding ContentVersion}" Width="Auto" MinWidth="70" />
+          <DataGridTextColumn Header="FW" Binding="{Binding RequiredFirmware}" Width="Auto" MinWidth="55" />
+          <DataGridTextColumn Header="Size" Binding="{Binding SizeText}" Width="Auto" MinWidth="80" />
         </DataGrid.Columns>
       </DataGrid>
 

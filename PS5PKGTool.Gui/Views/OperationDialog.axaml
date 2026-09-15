@@ -1,0 +1,72 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:PS5PKGTool.Gui.ViewModels"
+        x:Class="PS5PKGTool.Gui.Views.OperationDialog"
+        x:DataType="vm:OperationDialogViewModel"
+        Title="{Binding Title}"
+        Width="520" SizeToContent="Height"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner">
+
+  <StackPanel Margin="16" Spacing="10">
+
+    <TextBlock Text="{Binding Title}" FontSize="16" FontWeight="SemiBold" />
+
+    <StackPanel Spacing="4" IsVisible="{Binding SourceIsEditable}">
+      <TextBlock Text="Source package (.pkg)" Opacity="0.7" />
+      <Grid ColumnDefinitions="*,Auto">
+        <TextBox Grid.Column="0" Text="{Binding SourcePath}" PlaceholderText="Path to source .pkg"
+                  IsEnabled="{Binding !IsRunning}" />
+        <Button Grid.Column="1" Content="Browse..." Margin="6,0,0,0" Click="OnBrowseSource"
+                IsEnabled="{Binding !IsRunning}" />
+      </Grid>
+    </StackPanel>
+
+    <StackPanel Spacing="4" IsVisible="{Binding !SourceIsEditable}">
+      <TextBlock Text="Source" Opacity="0.7" />
+      <TextBox Text="{Binding SourcePath}" IsReadOnly="True" IsEnabled="False" />
+    </StackPanel>
+
+    <StackPanel Spacing="4" IsVisible="{Binding IsConvert}">
+      <TextBlock Text="Target format" Opacity="0.7" />
+      <ComboBox ItemsSource="{Binding ConversionTargets}" SelectedItem="{Binding Target}"
+                HorizontalAlignment="Stretch" IsEnabled="{Binding !IsRunning}" />
+    </StackPanel>
+
+    <StackPanel Spacing="4" IsVisible="{Binding IsBuild}">
+      <TextBlock Text="Content ID" Opacity="0.7" />
+      <TextBox Text="{Binding ContentId}" PlaceholderText="e.g. IV0000-CUSA00000_00-0000000000000000"
+                IsEnabled="{Binding !IsRunning}" />
+    </StackPanel>
+
+    <StackPanel Spacing="4">
+      <TextBlock Text="{Binding IsExtract, StringFormat='Output folder'}"
+                  IsVisible="{Binding IsExtract}" Opacity="0.7" />
+      <TextBlock Text="Output file" IsVisible="{Binding !IsExtract}" Opacity="0.7" />
+      <Grid ColumnDefinitions="*,Auto">
+        <TextBox Grid.Column="0" Text="{Binding OutputPath}" PlaceholderText="Choose an output path"
+                  IsEnabled="{Binding !IsRunning}" />
+        <Button Grid.Column="1" Content="Browse..." Margin="6,0,0,0" Click="OnBrowseOutput"
+                IsEnabled="{Binding !IsRunning}" />
+      </Grid>
+    </StackPanel>
+
+    <StackPanel Spacing="4" IsVisible="{Binding IsRunning}">
+      <ProgressBar Minimum="0" Maximum="100" Value="{Binding ProgressPercent}"
+                   IsIndeterminate="{Binding IsIndeterminate}" Height="6" />
+      <TextBlock Text="{Binding StatusText}" FontSize="11" Opacity="0.8" TextWrapping="Wrap" />
+    </StackPanel>
+
+    <Border IsVisible="{Binding HasResult}" Padding="8" CornerRadius="4" Background="#1F1F1F">
+      <TextBlock Text="{Binding ResultText}" TextWrapping="Wrap" FontSize="12" />
+    </Border>
+
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,6,0,0">
+      <Button Content="Cancel" Click="OnCancel" IsVisible="{Binding IsRunning}" />
+      <Button Content="Close" Click="OnClose" IsEnabled="{Binding CanClose}" IsVisible="{Binding !IsRunning}" />
+      <Button Content="Start" Click="OnStart" IsEnabled="{Binding CanStart}" IsVisible="{Binding !HasResult}"
+              IsDefault="True" />
+    </StackPanel>
+
+  </StackPanel>
+</Window>

@@ -149,6 +149,71 @@ namespace UFS2Tool
         }
 
         /// <summary>
+        /// Diagnose why the root directory (inode 2) could not be walked, without fabricating
+        /// any filesystem structure. Reports the superblock facts that were actually parsed,
+        /// the raw root-inode fields, and how many inodes across the image actually look
+        /// "in use" (non-zero mode) versus how many the superblock's own free-inode summary
+        /// claims are in use. A large mismatch (e.g. summary says inodes are allocated but the
+        /// inode table is physically zero) indicates the image's metadata was never fully
+        /// written by whatever tool produced it - a non-conforming image, not a parser bug.
+        /// The scan is bounded so it stays cheap even on multi-cylinder-group images.
+        /// </summary>
+        public string DiagnoseUnreadableRoot(uint rootInodeNumber = Ufs2Constants.RootInode, int maxInodesToScan = 200_000)
+        {
+            Ufs2Inode root;
+            string rootError;
+            try
+            {
+                root = ReadInode(rootInodeNumber);
+                rootError = "";
+            }
+            catch (Exception ex)
+            {
+                root = new Ufs2Inode();
+                rootError = $" ({ex.Message})";
+            }
+
+            long totalInodes = (long)Superblock.NumCylGroups * Superblock.InodesPerGroup;
+            long inodesToScan = Math.Min(totalInodes, maxInodesToScan);
+            long usedFound = 0;
+            long scanned = 0;
+            bool truncatedScan = inodesToScan < totalInodes;
+            for (long inodeNumber = 0; inodeNumber < inodesToScan; inodeNumber++)
+            {
+                Ufs2Inode inode;
+                try
+                {
+                    inode = ReadInode((uint)inodeNumber);
+                }
+                catch (Exception)
+                {
+                    break;
+                }
+                scanned++;
+                if (inode.Mode != 0) usedFound++;
+            }
+
+            long claimedUsed = totalInodes - Superblock.FreeInodes;
+
+            string sbLine = $"UFS2 superblock: offset {Ufs2Constants.SuperblockOffset} ({Ufs2Constants.SuperblockOffset / 1024} KB), " +
+                $"magic 0x{Superblock.Magic:X8} ({(Superblock.IsValid ? "valid" : "INVALID")}), " +
+                $"bsize={Superblock.BSize} fsize={Superblock.FSize} ncg={Superblock.NumCylGroups} " +
+                $"ipg={Superblock.InodesPerGroup} fpg={Superblock.CylGroupSize}.";
+            string rootLine = $"Root inode {rootInodeNumber}: mode=0x{root.Mode:X4} nlink={root.NLink} size={root.Size}{rootError} " +
+                $"(expected the IFDIR bit 0x{Ufs2Constants.IfDir:X4} set).";
+            string scanLine = $"Inode table scan: {usedFound} of {scanned} scanned inode slots have a non-zero mode" +
+                (truncatedScan ? $" (scan capped at {maxInodesToScan:N0} of {totalInodes:N0} total inodes)." : ".");
+            string summaryLine = $"Superblock free-inode summary claims {claimedUsed} of {totalInodes} inodes are allocated.";
+            string conclusion = usedFound == 0 && claimedUsed > 0
+                ? "The image's own bookkeeping expects files to exist, but no inode in the scanned range has been " +
+                  "written; the filesystem metadata was never completed by whatever tool produced this image."
+                : usedFound == 0
+                    ? "No inode in the scanned range is populated; the image contains no filesystem metadata."
+                    : "Some inodes are populated; a fallback scan for a usable directory inode may be able to recover entries.";
+            return string.Join('\n', sbLine, rootLine, scanLine, summaryLine, conclusion);
+        }
+
+        /// <summary>
         /// Convert a UFS1 inode to a UFS2 inode for unified API access.
         /// </summary>
         private static Ufs2Inode ConvertUfs1ToUfs2Inode(Ufs1Inode ufs1)

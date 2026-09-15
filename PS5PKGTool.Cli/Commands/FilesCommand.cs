@@ -45,10 +45,13 @@ internal static class FilesCommand
             return 1;
         }
 
-        Ps5GameInfo? game = await Locate.SingleAsync(target, cancellationToken);
+        (Ps5GameInfo? game, IReadOnlyList<string> errors) = await Locate.LocateAsync(target, cancellationToken);
         if (game is null)
         {
             Console.Error.WriteLine($"error: no PS5 content found at: {target}");
+            // The scanner explains a container it could parse but had to reject, which is far
+            // more useful than the generic message above.
+            foreach (string detail in errors) Console.Error.WriteLine(detail);
             return 1;
         }
 

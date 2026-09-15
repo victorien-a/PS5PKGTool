@@ -77,14 +77,14 @@ public sealed class Ufs2Volume : IDisposable
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(imagePath);
         ImagePath = Path.GetFullPath(imagePath);
-        _image = new Ufs2Image(ImagePath, readOnly: true);
+        _image = new Ufs2Image(imagePath: ImagePath, readOnly: true);
         try
         {
             if (!_image.Superblock.IsUfs2)
                 throw new InvalidDataException("FFPKG requires a UFS2 filesystem; this image is not UFS2.");
             ValidateGeometry(_image.Superblock, new FileInfo(ImagePath).Length);
             var visitedDirectories = new HashSet<uint>();
-            ReadDirectory(string.Empty, Ufs2Constants.RootInode, visitedDirectories, 0);
+            ReadRootDirectory(visitedDirectories);
         }
         catch
         {
@@ -105,12 +105,33 @@ public sealed class Ufs2Volume : IDisposable
                 throw new InvalidDataException("FFPKG requires a UFS2 filesystem; this image is not UFS2.");
             ValidateGeometry(_image.Superblock, stream.Length);
             var visitedDirectories = new HashSet<uint>();
-            ReadDirectory(string.Empty, Ufs2Constants.RootInode, visitedDirectories, 0);
+            ReadRootDirectory(visitedDirectories);
         }
         catch
         {
             _image.Dispose();
             throw;
+        }
+    }
+
+    /// <summary>
+    /// Reads the root directory (inode 2), same as any other directory. If the root inode is
+    /// not usable, this raises a diagnostic explaining what was actually found on disk (superblock
+    /// facts, the root inode's raw fields, and an inode-usage scan) instead of a bare assertion.
+    /// It never fabricates a root directory or invents entries - a non-conforming image still
+    /// fails to open, but with an explanation the user can act on.
+    /// </summary>
+    private void ReadRootDirectory(HashSet<uint> visitedDirectories)
+    {
+        try
+        {
+            ReadDirectory(string.Empty, Ufs2Constants.RootInode, visitedDirectories, 0);
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("is not a directory", StringComparison.Ordinal))
+        {
+            string diagnosis = _image.DiagnoseUnreadableRoot();
+            throw new InvalidDataException(
+                $"The FFPKG's root directory (inode {Ufs2Constants.RootInode}) could not be read: {ex.Message}\n{diagnosis}", ex);
         }
     }
 

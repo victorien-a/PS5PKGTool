@@ -10,11 +10,19 @@ namespace PS5PKGTool.Cli;
 /// </summary>
 internal static class Locate
 {
-    public static async Task<Ps5GameInfo?> SingleAsync(string path, CancellationToken cancellationToken)
+    public static async Task<Ps5GameInfo?> SingleAsync(string path, CancellationToken cancellationToken) =>
+        (await LocateAsync(path, cancellationToken)).Game;
+
+    /// <summary>
+    /// Same as <see cref="SingleAsync"/> but also returns why the scanner rejected a path, so a
+    /// command can explain a malformed container instead of only saying nothing was found.
+    /// </summary>
+    public static async Task<(Ps5GameInfo? Game, IReadOnlyList<string> Errors)> LocateAsync(
+        string path, CancellationToken cancellationToken)
     {
         string full = Path.GetFullPath(path);
         bool isFile = File.Exists(full);
-        if (!isFile && !Directory.Exists(full)) return null;
+        if (!isFile && !Directory.Exists(full)) return (null, []);
 
         string searchRoot = isFile ? Path.GetDirectoryName(full) ?? full : full;
 
@@ -27,7 +35,15 @@ internal static class Locate
         // For a directory, fall back to the first hit when nothing is rooted exactly at it.
         if (match is null && !isFile) match = result.Games.FirstOrDefault();
         if (match is not null) ResolveSize(match, cancellationToken);
-        return match;
+
+        // Only surface errors that name this path; a folder scan can report unrelated files.
+        string[] relevant = match is not null
+            ? []
+            : result.Errors
+                .Where(error => !isFile || error.Contains(Path.GetFileName(full), StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+
+        return (match, relevant.Length > 0 ? relevant : result.Errors.ToArray());
     }
 
     /// <summary>

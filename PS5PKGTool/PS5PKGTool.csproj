@@ -23,13 +23,6 @@
     <ProjectReference Include="..\..\DarkUI\DarkUI\DarkUI.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="ThirdParty\Oodle\oo2core_9_win64.dll">
-      <Link>oo2core_9_win64.dll</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-    </Content>
-  </ItemGroup>
-  <ItemGroup>
     <EmbeddedResource Include="Resources\*.png" />
     <EmbeddedResource Include="icon.ico">
       <LogicalName>PS5PKGTool.icon.ico</LogicalName>
